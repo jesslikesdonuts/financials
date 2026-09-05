@@ -11,8 +11,8 @@ export function DebtEquityChart({ rows }: { rows: { scenario: Scenario; metrics:
   }))
 
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-slate-100">Debt vs. equity</h3>
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <h3 className="mb-3 text-sm font-semibold text-slate-900">Debt vs. equity</h3>
       <ResponsiveContainer width="100%" height={310}>
         <BarChart data={data} margin={{ top: 4, right: 12, left: 4, bottom: 24 }}>
           <CartesianGrid stroke={chartTheme.grid} strokeDasharray="3 3" vertical={false} />
@@ -29,9 +29,9 @@ export function DebtEquityChart({ rows }: { rows: { scenario: Scenario; metrics:
           />
           <YAxis tick={axisTickStyle} tickFormatter={(v) => formatCurrency(v)} axisLine={false} tickLine={false} width={80} />
           <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number) => formatCurrency(value)} />
-          <Legend wrapperStyle={{ fontSize: 12, color: '#cbd5e1' }} />
-          <Bar dataKey="Debt" stackId="a" fill="#e8845c" radius={[0, 0, 4, 4]} />
-          <Bar dataKey="Equity" stackId="a" fill="#5cb88a" radius={[4, 4, 0, 0]} />
+          <Legend wrapperStyle={{ fontSize: 12, color: '#334155' }} />
+          <Bar dataKey="Debt" stackId="a" fill="#ea580c" radius={[0, 0, 4, 4]} />
+          <Bar dataKey="Equity" stackId="a" fill="#16a34a" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

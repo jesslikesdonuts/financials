@@ -22,8 +22,8 @@ export function NetWorthChart({ series, dataKey = 'netWorth', title }: { series:
   }
 
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-slate-100">{title}</h3>
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <h3 className="mb-3 text-sm font-semibold text-slate-900">{title}</h3>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={merged} margin={{ top: 4, right: 12, left: 4, bottom: 0 }}>
           <CartesianGrid stroke={chartTheme.grid} strokeDasharray="3 3" vertical={false} />
@@ -48,7 +48,7 @@ export function NetWorthChart({ series, dataKey = 'netWorth', title }: { series:
           />
           <Legend
             formatter={(value) => series.find((s) => s.scenario.id === value)?.scenario.name ?? value}
-            wrapperStyle={{ fontSize: 12, color: '#cbd5e1' }}
+            wrapperStyle={{ fontSize: 12, color: '#334155' }}
           />
           {series.map(({ scenario }) => (
             <Line

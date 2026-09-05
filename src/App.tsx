@@ -106,18 +106,18 @@ export default function App() {
       />
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-ink-700 bg-ink-900 px-5 py-3">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
           <div>
-            <h1 className="text-base font-semibold text-slate-100">Financial Scenario Modeller</h1>
+            <h1 className="text-base font-semibold text-slate-900">Financial Scenario Modeller</h1>
             <p className="text-xs text-slate-500">Property, mortgages, rentals & career breaks — modelled side by side</p>
           </div>
-          <nav className="flex gap-1 rounded-lg border border-ink-700 bg-ink-800 p-1">
+          <nav className="flex gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
             {(['dashboard', 'editor', 'compare'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                  tab === t ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-slate-200'
+                  tab === t ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 {t === 'compare' ? `Compare (${selectedScenarios.length})` : t}

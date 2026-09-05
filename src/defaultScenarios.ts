@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid'
 import type { Scenario } from './types'
 
-export const SCENARIO_COLORS = ['#5b8def', '#e8845c', '#5cb88a', '#c77dd1', '#d9c25c', '#6fc2d9']
+export const SCENARIO_COLORS = ['#2563eb', '#c2410c', '#15803d', '#9333ea', '#a16207', '#0e7490']
 
 export function blankScenario(name: string, color: string): Scenario {
   return {

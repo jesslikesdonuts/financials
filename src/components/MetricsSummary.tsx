@@ -2,9 +2,9 @@ import type { ScenarioMetrics } from '../types'
 import { formatCurrency, formatMonths } from '../calculations'
 
 function Metric({ label, value, tone = 'neutral', hint }: { label: string; value: string; tone?: 'good' | 'bad' | 'neutral'; hint?: string }) {
-  const color = tone === 'good' ? 'text-emerald-400' : tone === 'bad' ? 'text-rose-400' : 'text-slate-100'
+  const color = tone === 'good' ? 'text-emerald-600' : tone === 'bad' ? 'text-rose-600' : 'text-slate-900'
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900 p-3">
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
       <p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p>
       <p className={`mt-1 text-lg font-semibold ${color}`}>{value}</p>
       {hint && <p className="mt-0.5 text-[11px] text-slate-500">{hint}</p>}

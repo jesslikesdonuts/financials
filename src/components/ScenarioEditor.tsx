@@ -15,12 +15,12 @@ export function ScenarioEditor({
 
   return (
     <div className="flex flex-col gap-4 pb-10">
-      <div className="rounded-lg border border-ink-700 bg-ink-900 p-4">
-        <label className="text-xs font-medium text-slate-400">Scenario name</label>
+      <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <label className="text-xs font-medium text-slate-600">Scenario name</label>
         <input
           value={scenario.name}
           onChange={(e) => set('name', e.target.value)}
-          className="mt-1 w-full rounded border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
+          className="mt-1 w-full rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
         />
       </div>
 
@@ -158,7 +158,7 @@ export function ScenarioEditor({
               type="checkbox"
               checked={scenario.secondPropertyEnabled}
               onChange={(e) => set('secondPropertyEnabled', e.target.checked)}
-              className="h-4 w-4 rounded border-ink-500 bg-ink-800 text-blue-500 focus:ring-blue-400"
+              className="h-4 w-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-400"
             />
           </span>
         }
@@ -245,7 +245,7 @@ export function ScenarioEditor({
             <p className="text-xs text-slate-500">No one-off costs added yet.</p>
           )}
           {scenario.oneOffCosts.map((cost) => (
-            <div key={cost.id} className="flex flex-wrap items-center gap-2 rounded border border-ink-700 bg-ink-800 p-2">
+            <div key={cost.id} className="flex flex-wrap items-center gap-2 rounded border border-slate-200 bg-slate-50 p-2">
               <input
                 value={cost.label}
                 onChange={(e) =>
@@ -255,7 +255,7 @@ export function ScenarioEditor({
                   )
                 }
                 placeholder="Label"
-                className="min-w-0 flex-1 rounded border border-ink-600 bg-ink-900 px-2 py-1 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
+                className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
               />
               <span className="text-xs text-slate-500">£</span>
               <input
@@ -269,7 +269,7 @@ export function ScenarioEditor({
                     ),
                   )
                 }
-                className="w-24 rounded border border-ink-600 bg-ink-900 px-2 py-1 text-right text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
+                className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
               />
               <input
                 type="number"
@@ -283,12 +283,12 @@ export function ScenarioEditor({
                   )
                 }
                 title="Months from now"
-                className="w-16 rounded border border-ink-600 bg-ink-900 px-2 py-1 text-right text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
+                className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
               />
               <span className="text-xs text-slate-500">mo</span>
               <button
                 onClick={() => set('oneOffCosts', scenario.oneOffCosts.filter((c) => c.id !== cost.id))}
-                className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-950"
+                className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
               >
                 Remove
               </button>
@@ -298,7 +298,7 @@ export function ScenarioEditor({
             onClick={() =>
               set('oneOffCosts', [...scenario.oneOffCosts, { id: uuid(), label: 'New cost', amount: 1000, monthOffset: 0 }])
             }
-            className="self-start rounded border border-ink-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-blue-400 hover:text-blue-300"
+            className="self-start rounded border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-blue-400 hover:text-blue-600"
           >
             + Add one-off cost
           </button>

@@ -15,13 +15,13 @@ export function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900">
+    <div className="rounded-lg border border-slate-200 bg-white">
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
       >
         <div>
-          <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
+          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
           {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
         </div>
         <div className="flex items-center gap-3">
@@ -29,7 +29,7 @@ export function Section({
           <span className={`text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}>⌄</span>
         </div>
       </button>
-      {open && <div className="grid grid-cols-1 gap-4 border-t border-ink-700 px-4 py-4 sm:grid-cols-2">{children}</div>}
+      {open && <div className="grid grid-cols-1 gap-4 border-t border-slate-200 px-4 py-4 sm:grid-cols-2">{children}</div>}
     </div>
   )
 }

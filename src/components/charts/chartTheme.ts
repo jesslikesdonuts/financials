@@ -1,8 +1,9 @@
 export const chartTheme = {
-  grid: '#2a3644',
-  axis: '#7c8ba1',
-  tooltipBg: '#161d26',
-  tooltipBorder: '#2a3644',
+  grid: '#e2e8f0',
+  axis: '#64748b',
+  tooltipBg: '#ffffff',
+  tooltipBorder: '#e2e8f0',
+  legendText: '#334155',
 }
 
 export const tooltipContentStyle = {
@@ -10,7 +11,8 @@ export const tooltipContentStyle = {
   border: `1px solid ${chartTheme.tooltipBorder}`,
   borderRadius: 8,
   fontSize: 12,
-  color: '#e2e8f0',
+  color: '#1e293b',
+  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
 }
 
 export const axisTickStyle = { fill: chartTheme.axis, fontSize: 11 }

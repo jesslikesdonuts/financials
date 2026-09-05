@@ -11,8 +11,8 @@ export function CashflowChart({ rows }: { rows: { scenario: Scenario; metrics: S
   }))
 
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-slate-100">Monthly property cashflow</h3>
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <h3 className="mb-3 text-sm font-semibold text-slate-900">Monthly property cashflow</h3>
       <ResponsiveContainer width="100%" height={270}>
         <BarChart data={data} margin={{ top: 4, right: 12, left: 4, bottom: 24 }}>
           <CartesianGrid stroke={chartTheme.grid} strokeDasharray="3 3" vertical={false} />
@@ -32,7 +32,7 @@ export function CashflowChart({ rows }: { rows: { scenario: Scenario; metrics: S
           <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number) => formatCurrency(value)} />
           <Bar dataKey="value" radius={[4, 4, 4, 4]}>
             {data.map((d) => (
-              <Cell key={d.name} fill={d.value >= 0 ? '#5cb88a' : '#e0654f'} />
+              <Cell key={d.name} fill={d.value >= 0 ? '#16a34a' : '#dc2626'} />
             ))}
           </Bar>
         </BarChart>

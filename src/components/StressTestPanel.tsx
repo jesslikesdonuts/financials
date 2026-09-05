@@ -12,15 +12,15 @@ export function StressTestPanel({
     onChange((s) => ({ ...s, [key]: value }))
 
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900 p-4">
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-slate-100">Stress test</h3>
+          <h3 className="text-sm font-semibold text-slate-900">Stress test</h3>
           <p className="text-[11px] text-slate-500">Applies to every scenario shown</p>
         </div>
         <button
           onClick={() => set('enabled', !stress.enabled)}
-          className={`relative h-6 w-11 rounded-full transition-colors ${stress.enabled ? 'bg-blue-500' : 'bg-ink-600'}`}
+          className={`relative h-6 w-11 rounded-full transition-colors ${stress.enabled ? 'bg-blue-600' : 'bg-slate-300'}`}
         >
           <span
             className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${

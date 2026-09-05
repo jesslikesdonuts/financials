@@ -14,14 +14,14 @@ export function SliderInput({ label, value, onChange, min, max, step = 1, suffix
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <label className="text-xs font-medium text-slate-400">{label}</label>
+        <label className="text-xs font-medium text-slate-600">{label}</label>
         <div className="flex items-center gap-1">
           {prefix && <span className="text-xs text-slate-500">{prefix}</span>}
           <input
             type="number"
             value={Number.isFinite(value) ? value : 0}
             onChange={(e) => onChange(Number(e.target.value))}
-            className="w-24 rounded border border-ink-600 bg-ink-800 px-1.5 py-0.5 text-right text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
+            className="w-24 rounded border border-slate-300 bg-slate-50 px-1.5 py-0.5 text-right text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
           />
           {suffix && <span className="text-xs text-slate-500">{suffix}</span>}
         </div>
@@ -56,10 +56,10 @@ export function CheckboxInput({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 rounded border-ink-500 bg-ink-800 text-blue-500 focus:ring-blue-400"
+        className="mt-0.5 h-4 w-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-400"
       />
       <span>
-        <span className="text-sm font-medium text-slate-200">{label}</span>
+        <span className="text-sm font-medium text-slate-800">{label}</span>
         {hint && <p className="text-[11px] leading-tight text-slate-500">{hint}</p>}
       </span>
     </label>

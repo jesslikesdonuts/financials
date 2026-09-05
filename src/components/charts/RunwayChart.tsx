@@ -16,8 +16,8 @@ export function RunwayChart({ rows }: { rows: { scenario: Scenario; metrics: Sce
   }))
 
   return (
-    <div className="rounded-lg border border-ink-700 bg-ink-900 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-slate-100">Financial runway</h3>
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <h3 className="mb-3 text-sm font-semibold text-slate-900">Financial runway</h3>
       <p className="mb-2 text-[11px] text-slate-500">
         Months your remaining cash lasts if outgoings exceed all incoming money under current stress settings
       </p>
@@ -39,9 +39,9 @@ export function RunwayChart({ rows }: { rows: { scenario: Scenario; metrics: Sce
           <Tooltip contentStyle={tooltipContentStyle} formatter={(_: number, __: string, item: any) => item.payload.label} />
           <Bar dataKey="value" radius={[4, 4, 0, 0]}>
             {data.map((d) => (
-              <Cell key={d.name} fill={d.isInfinite ? '#5cb88a' : '#5b8def'} />
+              <Cell key={d.name} fill={d.isInfinite ? '#16a34a' : '#2563eb'} />
             ))}
-            <LabelList dataKey="label" position="top" style={{ fill: '#cbd5e1', fontSize: 11 }} />
+            <LabelList dataKey="label" position="top" style={{ fill: '#334155', fontSize: 11 }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
