@@ -1,6 +1,6 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { ProjectionPoint, Scenario } from '../../types'
-import { formatCurrency } from '../../calculations'
+import type { Currency, ProjectionPoint, Scenario } from '../../types'
+import { formatAmount } from '../../currency'
 import { axisTickStyle, chartTheme, tooltipContentStyle } from './chartTheme'
 
 interface Series {
@@ -8,7 +8,17 @@ interface Series {
   points: ProjectionPoint[]
 }
 
-export function NetWorthChart({ series, dataKey = 'netWorth', title }: { series: Series[]; dataKey?: keyof ProjectionPoint; title: string }) {
+export function NetWorthChart({
+  series,
+  dataKey = 'netWorth',
+  title,
+  currency,
+}: {
+  series: Series[]
+  dataKey?: keyof ProjectionPoint
+  title: string
+  currency: Currency
+}) {
   const maxYears = Math.max(...series.map((s) => s.points[s.points.length - 1]?.year ?? 0))
   const merged: Record<number, any>[] = []
   const yearBuckets = Math.round(maxYears) + 1
@@ -36,19 +46,19 @@ export function NetWorthChart({ series, dataKey = 'netWorth', title }: { series:
           />
           <YAxis
             tick={axisTickStyle}
-            tickFormatter={(v) => formatCurrency(v)}
+            tickFormatter={(v) => formatAmount(v, currency)}
             axisLine={false}
             tickLine={false}
             width={80}
           />
           <Tooltip
             contentStyle={tooltipContentStyle}
-            formatter={(value: number, name: string) => [formatCurrency(value), series.find((s) => s.scenario.id === name)?.scenario.name ?? name]}
+            formatter={(value: number, name: string) => [formatAmount(value, currency), series.find((s) => s.scenario.id === name)?.scenario.name ?? name]}
             labelFormatter={(v) => `Year ${v}`}
           />
           <Legend
             formatter={(value) => series.find((s) => s.scenario.id === value)?.scenario.name ?? value}
-            wrapperStyle={{ fontSize: 12, color: '#334155' }}
+            wrapperStyle={{ fontSize: 12, color: chartTheme.legendText }}
           />
           {series.map(({ scenario }) => (
             <Line

@@ -1,5 +1,6 @@
 import type { Scenario } from '../types'
-import { formatCurrency } from '../calculations'
+import { decisionSummarySentence } from '../decisionCategories'
+import { formatAmount } from '../currency'
 import type { ScenarioMetrics } from '../types'
 
 export function Sidebar({
@@ -66,11 +67,10 @@ export function Sidebar({
                       className="min-w-0 flex-1 truncate bg-transparent text-sm font-medium text-slate-900 focus:outline-none"
                     />
                   </div>
+                  <p className="mt-0.5 truncate text-[11px] text-slate-400">{decisionSummarySentence(scenario.decisions)}</p>
                   {metrics && (
-                    <p
-                      className={`mt-1 text-xs ${metrics.monthlyHouseholdCashflow >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
-                    >
-                      {formatCurrency(metrics.monthlyHouseholdCashflow)}/mo · {formatCurrency(metrics.totalEquity)} equity
+                    <p className={`mt-0.5 text-xs ${metrics.monthlySurplus >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {formatAmount(metrics.monthlySurplus, metrics.displayCurrency)}/mo · {formatAmount(metrics.netWorth, metrics.displayCurrency)} net worth
                     </p>
                   )}
                 </button>

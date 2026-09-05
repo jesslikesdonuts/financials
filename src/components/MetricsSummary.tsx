@@ -1,5 +1,5 @@
 import type { ScenarioMetrics } from '../types'
-import { formatCurrency, formatMonths } from '../calculations'
+import { formatAmount, formatMonths } from '../currency'
 
 function Metric({ label, value, tone = 'neutral', hint }: { label: string; value: string; tone?: 'good' | 'bad' | 'neutral'; hint?: string }) {
   const color = tone === 'good' ? 'text-emerald-600' : tone === 'bad' ? 'text-rose-600' : 'text-slate-900'
@@ -13,36 +13,28 @@ function Metric({ label, value, tone = 'neutral', hint }: { label: string; value
 }
 
 export function MetricsSummary({ metrics }: { metrics: ScenarioMetrics }) {
+  const cur = metrics.displayCurrency
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      <Metric label="Monthly mortgage payment" value={formatCurrency(metrics.totalMonthlyMortgagePayment)} />
+      <Metric label="Net worth" value={formatAmount(metrics.netWorth, cur)} tone={metrics.netWorth >= 0 ? 'good' : 'bad'} />
+      <Metric label="Total property equity" value={formatAmount(metrics.totalPropertyEquity, cur)} tone={metrics.totalPropertyEquity >= 0 ? 'good' : 'bad'} />
+      <Metric label="Total debt" value={formatAmount(metrics.totalDebt, cur)} />
+      <Metric label="Monthly mortgage payments" value={formatAmount(metrics.totalMonthlyMortgagePayment, cur)} />
       <Metric
-        label="Monthly property cashflow"
-        value={formatCurrency(metrics.monthlyPropertyCashflow)}
-        tone={metrics.monthlyPropertyCashflow >= 0 ? 'good' : 'bad'}
+        label="Monthly surplus / deficit"
+        value={formatAmount(metrics.monthlySurplus, cur)}
+        tone={metrics.monthlySurplus >= 0 ? 'good' : 'bad'}
       />
       <Metric
-        label="Annual property cashflow"
-        value={formatCurrency(metrics.annualPropertyCashflow)}
-        tone={metrics.annualPropertyCashflow >= 0 ? 'good' : 'bad'}
+        label="Required income (gross)"
+        value={formatAmount(metrics.requiredIncomeMonthlyGross, cur)}
+        hint="Income needed to break even each month"
       />
-      <Metric label="Total debt" value={formatCurrency(metrics.totalDebt)} />
-      <Metric label="Total equity" value={formatCurrency(metrics.totalEquity)} tone={metrics.totalEquity >= 0 ? 'good' : 'bad'} />
+      <Metric label="Cash available" value={formatAmount(metrics.cashAvailable, cur)} tone={metrics.cashAvailable >= 0 ? 'good' : 'bad'} />
       <Metric
-        label="Cash remaining after purchases"
-        value={formatCurrency(metrics.cashRemainingAfterPurchases)}
-        tone={metrics.cashRemainingAfterPurchases >= 0 ? 'good' : 'bad'}
-      />
-      <Metric
-        label="Household cashflow / mo"
-        value={formatCurrency(metrics.monthlyHouseholdCashflow)}
-        tone={metrics.monthlyHouseholdCashflow >= 0 ? 'good' : 'bad'}
-        hint="Income + property cashflow"
-      />
-      <Metric
-        label="Financial runway"
-        value={formatMonths(metrics.runwayMonths)}
-        tone={!isFinite(metrics.runwayMonths) || metrics.runwayMonths > 12 ? 'good' : metrics.runwayMonths > 3 ? 'neutral' : 'bad'}
+        label="Cash runway"
+        value={formatMonths(metrics.cashRunwayMonths)}
+        tone={!isFinite(metrics.cashRunwayMonths) || metrics.cashRunwayMonths > 12 ? 'good' : metrics.cashRunwayMonths > 3 ? 'neutral' : 'bad'}
       />
     </div>
   )

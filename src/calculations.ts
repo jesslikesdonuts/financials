@@ -1,6 +1,17 @@
-import type { ProjectionPoint, Scenario, ScenarioMetrics, StressSettings } from './types'
+import { suggestedAxisScores } from './decisionCategories'
+import { convert, resolveDisplayCurrency } from './currency'
+import type {
+  Currency,
+  GlobalSettings,
+  LifeAxis,
+  Money,
+  ProjectionPoint,
+  Scenario,
+  ScenarioMetrics,
+  StressSettings,
+} from './types'
+import { LIFE_AXES } from './types'
 
-/** Standard amortizing loan payment. Returns 0 for a non-positive principal. */
 export function mortgagePayment(principal: number, annualRatePct: number, termYears: number): number {
   if (principal <= 0 || termYears <= 0) return 0
   const r = annualRatePct / 100 / 12
@@ -9,7 +20,6 @@ export function mortgagePayment(principal: number, annualRatePct: number, termYe
   return (principal * r) / (1 - Math.pow(1 + r, -n))
 }
 
-/** Remaining balance of an amortizing loan after `monthsElapsed` payments. */
 export function remainingBalance(
   principal: number,
   annualRatePct: number,
@@ -26,170 +36,222 @@ export function remainingBalance(
   return Math.max(0, balance)
 }
 
-export function sumOneOffCosts(scenario: Scenario, upToMonth?: number): number {
-  return scenario.oneOffCosts
-    .filter((c) => (upToMonth === undefined ? true : c.monthOffset <= upToMonth))
-    .reduce((sum, c) => sum + c.amount, 0)
-}
+export function computeMetrics(
+  scenario: Scenario,
+  settings: GlobalSettings,
+  stress: StressSettings,
+  forceCurrency?: Currency,
+): ScenarioMetrics {
+  const display = forceCurrency ?? resolveDisplayCurrency(scenario.finance.displayCurrency, settings)
+  const toDisplay = (m: Money) => convert(m, display, settings)
 
-export function computeMetrics(scenario: Scenario, stress: StressSettings): ScenarioMetrics {
   const rateShock = stress.enabled ? stress.rateShockPct : 0
   const vacancy = stress.enabled ? stress.vacancyPct / 100 : 0
   const priceShock = stress.enabled ? stress.propertyPriceChangePct / 100 : 0
   const incomeLoss = stress.enabled ? stress.incomeLossPct / 100 : 0
 
-  const primaryMortgageBalance =
-    scenario.refinanceAmount > 0 ? scenario.refinanceAmount : scenario.existingMortgageBalance
-  const primaryMonthlyPayment = mortgagePayment(
-    primaryMortgageBalance,
-    scenario.mortgageRate + rateShock,
-    scenario.mortgageTermYears,
-  )
+  const { finance, decisions } = scenario
+  const cedar = finance.cedarCottage
+  const second = finance.secondProperty
 
-  const secondMortgageBalance = scenario.secondPropertyEnabled ? scenario.secondMortgageAmount : 0
-  const secondMonthlyPayment = scenario.secondPropertyEnabled
-    ? mortgagePayment(secondMortgageBalance, scenario.secondMortgageRate + rateShock, scenario.secondMortgageTermYears)
+  const cedarSold = decisions.cedarCottage === 'sell'
+  const cedarRentedOut = decisions.cedarCottage === 'keepRenting' || decisions.cedarCottage === 'refinance'
+  const secondEnabled = decisions.secondProperty !== 'none'
+
+  const cedarBalanceBase = toDisplay(cedar.mortgageBalance) + (decisions.cedarCottage === 'refinance' ? toDisplay(cedar.equityReleased) : 0)
+  const cedarValue = toDisplay(cedar.value) * (1 + priceShock)
+  const cedarBalance = cedarSold ? 0 : cedarBalanceBase
+  const cedarMortgagePayment = cedarSold ? 0 : mortgagePayment(cedarBalance, cedar.mortgageRate + rateShock, cedar.mortgageTermYears)
+  const cedarRent = cedarSold || !cedarRentedOut ? 0 : toDisplay(cedar.rentalIncomeMonthly) * (1 - vacancy)
+  const cedarRunningCosts = cedarSold
+    ? 0
+    : toDisplay(cedar.maintenanceMonthly) + toDisplay(cedar.serviceChargesMonthly) + (cedarRentedOut ? toDisplay(cedar.managementFeesMonthly) : 0)
+  const cedarEquity = cedarSold ? 0 : cedarValue - cedarBalance
+  const cedarSaleProceeds = cedarSold ? cedarValue - toDisplay(cedar.mortgageBalance) - (cedarValue * cedar.sellingCostsPct) / 100 : 0
+
+  const secondBalance = secondEnabled ? toDisplay(second.mortgageBalance) : 0
+  const secondValue = secondEnabled ? toDisplay(second.value) * (1 + priceShock) : 0
+  const secondMortgagePayment = secondEnabled ? mortgagePayment(secondBalance, second.mortgageRate + rateShock, second.mortgageTermYears) : 0
+  const secondRent = secondEnabled ? toDisplay(second.rentalIncomeMonthly) * (1 - vacancy) : 0
+  const secondRunningCosts = secondEnabled
+    ? toDisplay(second.maintenanceMonthly) + toDisplay(second.serviceChargesMonthly) + toDisplay(second.managementFeesMonthly)
     : 0
+  const secondEquity = secondEnabled ? secondValue - secondBalance : 0
+  const secondUpfront = secondEnabled ? toDisplay(second.deposit) + toDisplay(second.purchaseCosts) : 0
 
-  const totalMonthlyMortgagePayment = primaryMonthlyPayment + secondMonthlyPayment
+  const totalMonthlyMortgagePayment = cedarMortgagePayment + secondMortgagePayment
+  const totalRentalIncome = cedarRent + secondRent
+  const totalRunningCosts = cedarRunningCosts + secondRunningCosts
 
-  const effectiveRentalIncome = scenario.rentalIncome * (1 - vacancy)
-  const serviceCharges = scenario.secondPropertyEnabled ? scenario.serviceChargesMonthly : 0
-  const monthlyPropertyCashflow =
-    effectiveRentalIncome -
-    scenario.managementFeesMonthly -
-    scenario.maintenanceAllowanceMonthly -
-    serviceCharges -
-    totalMonthlyMortgagePayment
-  const annualPropertyCashflow = monthlyPropertyCashflow * 12
+  const travelMonthly = (finance.tripsPerYear * toDisplay(finance.travelCostPerTrip)) / 12
+  const dramaSchoolMonthly = decisions.acting === 'dramaSchool' ? toDisplay(finance.dramaSchoolCostAnnual) / 12 : 0
 
-  const totalDebt = primaryMortgageBalance + secondMortgageBalance
-  const primaryValue = scenario.propertyValue * (1 + priceShock)
-  const secondValue = scenario.secondPropertyEnabled ? scenario.secondPropertyPrice * (1 + priceShock) : 0
-  const totalPropertyValue = primaryValue + secondValue
-  const totalEquity = totalPropertyValue - totalDebt
+  const monthlyOutgoings = totalMonthlyMortgagePayment + totalRunningCosts + toDisplay(finance.monthlyLivingCosts) + travelMonthly + dramaSchoolMonthly
 
-  const purchaseUpfront = scenario.secondPropertyEnabled ? scenario.deposit + scenario.purchaseTaxesFees : 0
-  const upfrontCosts = purchaseUpfront + sumOneOffCosts(scenario)
-  const cashRemainingAfterPurchases = scenario.currentSavings - upfrontCosts
+  const onCareerBreak = finance.careerBreakMonths > 0
+  const effectiveIncomeGross = onCareerBreak ? 0 : toDisplay(finance.incomeMonthlyGross) * (1 - incomeLoss)
+  const effectiveIncomeNet = effectiveIncomeGross * (1 - finance.taxRatePct / 100)
 
-  const onCareerBreak = scenario.careerBreakMonths > 0
-  const effectiveMonthlyIncome = onCareerBreak ? 0 : scenario.monthlyIncome * (1 - incomeLoss)
+  const monthlySurplus = effectiveIncomeNet + totalRentalIncome - monthlyOutgoings
 
-  const monthlyHouseholdCashflow = effectiveMonthlyIncome + monthlyPropertyCashflow
-  const monthlyBurn = -monthlyHouseholdCashflow
-  const runwayMonths =
-    monthlyBurn <= 0 ? Infinity : cashRemainingAfterPurchases <= 0 ? 0 : cashRemainingAfterPurchases / monthlyBurn
+  const requiredIncomeNet = monthlyOutgoings - totalRentalIncome
+  const requiredIncomeMonthlyGross = requiredIncomeNet <= 0 ? 0 : requiredIncomeNet / (1 - finance.taxRatePct / 100)
+
+  const totalDebt = cedarBalance + secondBalance
+  const totalPropertyEquity = cedarEquity + secondEquity
+
+  const upfrontOneOff = finance.oneOffCosts.reduce((sum, c) => sum + toDisplay(c.amount), 0)
+  const cashAvailable = toDisplay(finance.savings) + cedarSaleProceeds - secondUpfront - upfrontOneOff
+
+  const netWorth = totalPropertyEquity + cashAvailable
+
+  const monthlyBurn = -monthlySurplus
+  const cashRunwayMonths = monthlyBurn <= 0 ? Infinity : cashAvailable <= 0 ? 0 : cashAvailable / monthlyBurn
 
   return {
-    primaryMortgageBalance,
-    primaryMonthlyPayment,
-    secondMortgageBalance,
-    secondMonthlyPayment,
+    displayCurrency: display,
+    cedarMortgagePayment,
+    secondMortgagePayment,
     totalMonthlyMortgagePayment,
-    effectiveRentalIncome,
-    monthlyPropertyCashflow,
-    annualPropertyCashflow,
+    netWorth,
+    totalPropertyEquity,
     totalDebt,
-    totalPropertyValue,
-    totalEquity,
-    upfrontCosts,
-    cashRemainingAfterPurchases,
-    effectiveMonthlyIncome,
-    monthlyHouseholdCashflow,
-    monthlyBurn,
-    runwayMonths,
+    monthlySurplus,
+    requiredIncomeMonthlyGross,
+    cashRunwayMonths,
+    cashAvailable,
   }
 }
 
-/** Month-by-month projection used to drive the dashboard charts. */
-export function projectSeries(scenario: Scenario, stress: StressSettings): ProjectionPoint[] {
-  const metrics = computeMetrics(scenario, stress)
+export function projectSeries(
+  scenario: Scenario,
+  settings: GlobalSettings,
+  stress: StressSettings,
+  forceCurrency?: Currency,
+): ProjectionPoint[] {
+  const metrics = computeMetrics(scenario, settings, stress, forceCurrency)
+  const display = metrics.displayCurrency
+  const toDisplay = (m: Money) => convert(m, display, settings)
+
   const rateShock = stress.enabled ? stress.rateShockPct : 0
   const vacancy = stress.enabled ? stress.vacancyPct / 100 : 0
   const priceShock = stress.enabled ? stress.propertyPriceChangePct / 100 : 0
   const incomeLoss = stress.enabled ? stress.incomeLossPct / 100 : 0
 
-  const primaryRate = scenario.mortgageRate + rateShock
-  const secondRate = scenario.secondMortgageRate + rateShock
-  const months = Math.max(1, Math.round(scenario.projectionYears * 12))
+  const { finance, decisions } = scenario
+  const cedar = finance.cedarCottage
+  const second = finance.secondProperty
 
-  const appreciationMonthly = Math.pow(1 + scenario.propertyAppreciationPct / 100, 1 / 12)
-  const rentGrowthMonthly = Math.pow(1 + scenario.rentGrowthPct / 100, 1 / 12)
+  const cedarSold = decisions.cedarCottage === 'sell'
+  const cedarRentedOut = decisions.cedarCottage === 'keepRenting' || decisions.cedarCottage === 'refinance'
+  const secondEnabled = decisions.secondProperty !== 'none'
 
-  let propertyValue = metrics.totalPropertyValue > 0 ? scenario.propertyValue * (1 + priceShock) : 0
-  let secondPropertyValue = scenario.secondPropertyEnabled ? scenario.secondPropertyPrice * (1 + priceShock) : 0
-  let rent = scenario.rentalIncome
-  let savings = metrics.cashRemainingAfterPurchases
+  const cedarPrincipal = cedarSold ? 0 : toDisplay(cedar.mortgageBalance) + (decisions.cedarCottage === 'refinance' ? toDisplay(cedar.equityReleased) : 0)
+  const cedarRate = cedar.mortgageRate + rateShock
+  const secondPrincipal = secondEnabled ? toDisplay(second.mortgageBalance) : 0
+  const secondRate = second.mortgageRate + rateShock
+
+  const months = Math.max(1, Math.round(finance.projectionYears * 12))
+  const appreciationMonthly = Math.pow(1 + finance.propertyAppreciationPct / 100, 1 / 12)
+  const rentGrowthMonthly = Math.pow(1 + finance.rentGrowthPct / 100, 1 / 12)
+
+  let cedarValue = cedarSold ? 0 : toDisplay(cedar.value) * (1 + priceShock)
+  let secondValue = secondEnabled ? toDisplay(second.value) * (1 + priceShock) : 0
+  let cedarRent = cedarSold || !cedarRentedOut ? 0 : toDisplay(cedar.rentalIncomeMonthly)
+  let secondRent = secondEnabled ? toDisplay(second.rentalIncomeMonthly) : 0
+  let savings = metrics.cashAvailable
+
+  const dramaSchoolMonths = decisions.acting === 'dramaSchool' ? Math.round(finance.dramaSchoolYears * 12) : 0
+  const dramaSchoolMonthlyCost = toDisplay(finance.dramaSchoolCostAnnual) / 12
+  const travelMonthly = (finance.tripsPerYear * toDisplay(finance.travelCostPerTrip)) / 12
+  const livingCosts = toDisplay(finance.monthlyLivingCosts)
+
+  const cedarRunningCosts = cedarSold
+    ? 0
+    : toDisplay(cedar.maintenanceMonthly) + toDisplay(cedar.serviceChargesMonthly) + (cedarRentedOut ? toDisplay(cedar.managementFeesMonthly) : 0)
+  const secondRunningCosts = secondEnabled
+    ? toDisplay(second.maintenanceMonthly) + toDisplay(second.serviceChargesMonthly) + toDisplay(second.managementFeesMonthly)
+    : 0
 
   const points: ProjectionPoint[] = []
 
   for (let m = 0; m <= months; m++) {
-    const primaryBalance = remainingBalance(metrics.primaryMortgageBalance, primaryRate, scenario.mortgageTermYears, m)
-    const secondBalance = scenario.secondPropertyEnabled
-      ? remainingBalance(metrics.secondMortgageBalance, secondRate, scenario.secondMortgageTermYears, m)
-      : 0
-    const totalDebt = primaryBalance + secondBalance
-    const totalValue = propertyValue + secondPropertyValue
+    const cedarBalance = cedarSold ? 0 : remainingBalance(cedarPrincipal, cedarRate, cedar.mortgageTermYears, m)
+    const secondBalance = secondEnabled ? remainingBalance(secondPrincipal, secondRate, second.mortgageTermYears, m) : 0
+    const totalDebt = cedarBalance + secondBalance
+    const totalValue = cedarValue + secondValue
     const equity = totalValue - totalDebt
 
-    const onBreak = m < scenario.careerBreakMonths
-    const income = onBreak ? 0 : scenario.monthlyIncome * (1 - incomeLoss)
-    const savingsContribution = income * (scenario.annualSavingsRatePct / 100)
+    const onBreak = m < finance.careerBreakMonths
+    const income = onBreak ? 0 : toDisplay(finance.incomeMonthlyGross) * (1 - incomeLoss)
+    const incomeNet = income * (1 - finance.taxRatePct / 100)
 
-    const effectiveRent = rent * (1 - vacancy)
-    const serviceCharges = scenario.secondPropertyEnabled ? scenario.serviceChargesMonthly : 0
-    const primaryPayment = mortgagePayment(metrics.primaryMortgageBalance, primaryRate, scenario.mortgageTermYears)
-    const secondPayment = scenario.secondPropertyEnabled
-      ? mortgagePayment(metrics.secondMortgageBalance, secondRate, scenario.secondMortgageTermYears)
-      : 0
-    const propertyCashflow =
-      effectiveRent - scenario.managementFeesMonthly - scenario.maintenanceAllowanceMonthly - serviceCharges - primaryPayment - secondPayment
+    const onDramaSchool = dramaSchoolMonths > 0 && m < dramaSchoolMonths
+    const dramaSchoolCostThisMonth = onDramaSchool ? dramaSchoolMonthlyCost : 0
 
-    const oneOffThisMonth = scenario.oneOffCosts
+    const cedarPayment = cedarSold ? 0 : mortgagePayment(cedarPrincipal, cedarRate, cedar.mortgageTermYears)
+    const secondPayment = secondEnabled ? mortgagePayment(secondPrincipal, secondRate, second.mortgageTermYears) : 0
+    const effectiveCedarRent = cedarSold || !cedarRentedOut ? 0 : cedarRent * (1 - vacancy)
+    const effectiveSecondRent = secondEnabled ? secondRent * (1 - vacancy) : 0
+
+    const monthlyOutgoings =
+      cedarPayment + secondPayment + cedarRunningCosts + secondRunningCosts + livingCosts + travelMonthly + dramaSchoolCostThisMonth
+    const monthlySurplus = incomeNet + effectiveCedarRent + effectiveSecondRent - monthlyOutgoings
+
+    const oneOffThisMonth = finance.oneOffCosts
       .filter((c) => c.monthOffset === m)
-      .reduce((sum, c) => sum + c.amount, 0)
+      .reduce((sum, c) => sum + toDisplay(c.amount), 0)
 
     if (m > 0) {
-      savings += savingsContribution + propertyCashflow - oneOffThisMonth
-      propertyValue *= appreciationMonthly
-      secondPropertyValue *= appreciationMonthly
-      rent *= rentGrowthMonthly
+      savings += monthlySurplus - oneOffThisMonth
+      cedarValue *= appreciationMonthly
+      secondValue *= appreciationMonthly
+      cedarRent *= rentGrowthMonthly
+      secondRent *= rentGrowthMonthly
     }
 
     points.push({
       month: m,
       year: m / 12,
-      primaryBalance,
-      secondBalance,
       totalDebt,
       propertyValue: totalValue,
       equity,
       savings,
       netWorth: equity + savings,
-      cashflow: propertyCashflow + income,
     })
   }
 
   return points
 }
 
-export function formatCurrency(value: number, currency = 'GBP'): string {
+/** Weighted 0-10 life score from axis scores (override or suggested) and global importance weights. */
+export function computeLifeScore(scenario: Scenario, settings: GlobalSettings): number {
+  const suggested = suggestedAxisScores(scenario.decisions)
+  let weightedSum = 0
+  let weightTotal = 0
+  LIFE_AXES.forEach((axis) => {
+    const score = scenario.qualitative.axisScoreOverrides[axis] ?? suggested[axis]
+    const weight = settings.axisWeights[axis]
+    weightedSum += score * weight
+    weightTotal += weight
+  })
+  return weightTotal === 0 ? 0 : weightedSum / weightTotal
+}
+
+export function getAxisScore(scenario: Scenario, axis: LifeAxis): number {
+  const suggested = suggestedAxisScores(scenario.decisions)
+  return scenario.qualitative.axisScoreOverrides[axis] ?? suggested[axis]
+}
+
+export function isAxisOverridden(scenario: Scenario, axis: LifeAxis): boolean {
+  return scenario.qualitative.axisScoreOverrides[axis] !== undefined
+}
+
+export function formatCurrencyGeneric(value: number, currency: Currency): string {
   if (!isFinite(value)) return value > 0 ? '∞' : '−∞'
-  return new Intl.NumberFormat('en-GB', {
+  return new Intl.NumberFormat(currency === 'GBP' ? 'en-GB' : 'en-NZ', {
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
   }).format(value)
-}
-
-export function formatMonths(months: number): string {
-  if (!isFinite(months)) return 'Surplus (no burn)'
-  if (months <= 0) return '0 months'
-  if (months >= 1200) return '100+ years'
-  const years = Math.floor(months / 12)
-  const rem = Math.round(months % 12)
-  if (years === 0) return `${rem} mo`
-  if (rem === 0) return `${years} yr`
-  return `${years} yr ${rem} mo`
 }

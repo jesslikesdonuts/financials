@@ -2,25 +2,29 @@ import { useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { seedScenarios, SCENARIO_COLORS, blankScenario } from './defaultScenarios'
-import type { Scenario, StressSettings } from './types'
-import { DEFAULT_STRESS } from './types'
+import type { GlobalSettings, Scenario, StressSettings } from './types'
+import { DEFAULT_GLOBAL_SETTINGS, DEFAULT_STRESS } from './types'
 import { computeMetrics } from './calculations'
 import { Sidebar } from './components/Sidebar'
 import { ScenarioEditor } from './components/ScenarioEditor'
 import { Dashboard } from './components/Dashboard'
 import { ComparisonView } from './components/ComparisonView'
 import { StressTestPanel } from './components/StressTestPanel'
+import { GlobalSettingsPanel } from './components/GlobalSettingsPanel'
 
-type Tab = 'dashboard' | 'editor' | 'compare'
+type Tab = 'thisLife' | 'build' | 'compare'
+
+const TAB_LABELS: Record<Tab, string> = { thisLife: 'This Life', build: 'Build', compare: 'Compare Lives' }
 
 export default function App() {
-  const [scenarios, setScenarios] = useLocalStorage<Scenario[]>('fsm.scenarios', seedScenarios)
-  const [activeId, setActiveId] = useLocalStorage<string>('fsm.activeId', () => scenarios[0]?.id ?? '')
-  const [selectedIds, setSelectedIdsRaw] = useLocalStorage<string[]>('fsm.selectedIds', () =>
+  const [scenarios, setScenarios] = useLocalStorage<Scenario[]>('lsm.scenarios', seedScenarios)
+  const [activeId, setActiveId] = useLocalStorage<string>('lsm.activeId', () => scenarios[0]?.id ?? '')
+  const [selectedIds, setSelectedIdsRaw] = useLocalStorage<string[]>('lsm.selectedIds', () =>
     scenarios.map((s) => s.id),
   )
-  const [stress, setStress] = useLocalStorage<StressSettings>('fsm.stress', DEFAULT_STRESS)
-  const [tab, setTab] = useState<Tab>('dashboard')
+  const [settings, setSettings] = useLocalStorage<GlobalSettings>('lsm.settings', DEFAULT_GLOBAL_SETTINGS)
+  const [stress, setStress] = useLocalStorage<StressSettings>('lsm.stress', DEFAULT_STRESS)
+  const [tab, setTab] = useState<Tab>('thisLife')
 
   const selectedIds_ = useMemo(() => new Set(selectedIds), [selectedIds])
   const setSelectedIds = (updater: (s: Set<string>) => Set<string>) => {
@@ -32,10 +36,10 @@ export default function App() {
   const metricsById = useMemo(() => {
     const map: Record<string, ReturnType<typeof computeMetrics>> = {}
     scenarios.forEach((s) => {
-      map[s.id] = computeMetrics(s, stress)
+      map[s.id] = computeMetrics(s, settings, stress)
     })
     return map
-  }, [scenarios, stress])
+  }, [scenarios, settings, stress])
 
   function updateScenario(id: string, updater: (s: Scenario) => Scenario) {
     setScenarios((prev) => prev.map((s) => (s.id === id ? updater(s) : s)))
@@ -43,14 +47,14 @@ export default function App() {
 
   function addScenario() {
     const color = SCENARIO_COLORS[scenarios.length % SCENARIO_COLORS.length]
-    const s = blankScenario(`Scenario ${scenarios.length + 1}`, color)
+    const s = blankScenario(`Life ${scenarios.length + 1}`, color)
     setScenarios((prev) => [...prev, s])
     setActiveId(s.id)
     setSelectedIds((set) => {
       set.add(s.id)
       return set
     })
-    setTab('editor')
+    setTab('build')
   }
 
   function duplicateScenario(id: string) {
@@ -90,7 +94,7 @@ export default function App() {
         selectedIds={selectedIds_}
         onSelectActive={(id) => {
           setActiveId(id)
-          setTab('dashboard')
+          setTab('thisLife')
         }}
         onToggleSelected={(id) =>
           setSelectedIds((set) => {
@@ -108,19 +112,19 @@ export default function App() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
           <div>
-            <h1 className="text-base font-semibold text-slate-900">Financial Scenario Modeller</h1>
-            <p className="text-xs text-slate-500">Property, mortgages, rentals & career breaks — modelled side by side</p>
+            <h1 className="text-base font-semibold text-slate-900">Life Scenario Modeller</h1>
+            <p className="text-xs text-slate-500">If I choose this combination of decisions, what does that life look like?</p>
           </div>
           <nav className="flex gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
-            {(['dashboard', 'editor', 'compare'] as Tab[]).map((t) => (
+            {(['thisLife', 'build', 'compare'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   tab === t ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                {t === 'compare' ? `Compare (${selectedScenarios.length})` : t}
+                {t === 'compare' ? `${TAB_LABELS[t]} (${selectedScenarios.length})` : TAB_LABELS[t]}
               </button>
             ))}
           </nav>
@@ -128,13 +132,14 @@ export default function App() {
 
         <main className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 scrollbar-thin xl:flex-row">
           <div className="min-w-0 flex-1">
-            {tab === 'dashboard' && activeScenario && <Dashboard scenario={activeScenario} stress={stress} />}
-            {tab === 'editor' && activeScenario && (
+            {tab === 'thisLife' && activeScenario && <Dashboard scenario={activeScenario} settings={settings} stress={stress} />}
+            {tab === 'build' && activeScenario && (
               <ScenarioEditor scenario={activeScenario} onChange={(updater) => updateScenario(activeScenario.id, updater)} />
             )}
-            {tab === 'compare' && <ComparisonView scenarios={selectedScenarios} stress={stress} />}
+            {tab === 'compare' && <ComparisonView scenarios={selectedScenarios} settings={settings} stress={stress} />}
           </div>
-          <div className="w-full shrink-0 xl:w-72">
+          <div className="flex w-full shrink-0 flex-col gap-4 xl:w-72">
+            <GlobalSettingsPanel settings={settings} onChange={setSettings} />
             <StressTestPanel stress={stress} onChange={setStress} />
           </div>
         </main>
